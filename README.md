@@ -31,6 +31,7 @@ This project is designed as a **lightweight but extensible chat interface**, sho
 ### 2. Run the Backend
 ```
 cd backend
+pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
