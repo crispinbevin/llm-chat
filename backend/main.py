@@ -6,13 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import re
 
 def clean_llm_response(response: str) -> str:
-    # Remove <think> tags and their content
     cleaned = re.sub(r'<think>.*?</think>\s*', '', response, flags=re.DOTALL)
     
-    # Clean up extra whitespace but preserve markdown formatting
     cleaned = cleaned.strip()
     
-    # Optional: Clean up excessive newlines while preserving structure
     cleaned = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned)
     
     return cleaned
@@ -21,7 +18,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # you can restrict later to ["http://localhost:5173"]
+    allow_origins=["*"],   # maybe restrict later to ["http://localhost:5173"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,7 +46,7 @@ def chat(req: ChatRequest):
     system_prompt = personas.get(req.persona, personas["Normal"])
 
     payload = {
-        "model": "qwen3-4b-q4_k_m.gguf",  # same name you used with llama-server
+        "model": "qwen3-4b-q4_k_m.gguf",  # same name used with llama-server
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": req.message}

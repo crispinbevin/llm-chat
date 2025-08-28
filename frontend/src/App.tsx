@@ -8,13 +8,10 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   const parseMarkdown = (text: str) => {
-  // Convert **bold** to <strong>
   let parsed = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   
-  // Convert *italic* to <em> (avoid double conversion with bold)
   parsed = parsed.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
   
-  // Convert line breaks to <br>
   parsed = parsed.replace(/\n/g, '<br>');
   
   return parsed;
