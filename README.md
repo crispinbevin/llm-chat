@@ -55,5 +55,5 @@ npm run dev
 ```
 
 ## Sample Screenshot
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ea05eb74-2bce-4fae-9110-984a90b005cf" />
 
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/4fc26744-0b07-4369-9219-c542ca16d908" />
