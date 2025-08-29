@@ -54,3 +54,4 @@ doc/
 
 backend/llm
 backend/.venv
+backend/chat_logs.jsonl
