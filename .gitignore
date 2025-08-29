@@ -51,3 +51,6 @@ doc/
 
 # Logs
 *.log
+
+backend/llm
+backend/.venv

@@ -42,10 +42,11 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-zinc-900 text-white">
-      <div className="div">
-        <h1 className="text-5xl font-bold mx-12 mt-12 border-bottom-1">
+      <div className="div flex items-center justify-between mx-12 mt-12">
+        <h1 className="text-5xl font-bold  border-bottom-1">
           LLM Chat
         </h1>
+        <button className="bg-green-500 p-3 rounded-lg hover:cursor-pointer" onClick={ () => window.location.reload()}>New Chat +</button>
       </div>
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mt-12">
@@ -93,7 +94,7 @@ function App() {
           <option value="technical">Technical Explainer</option>
           <option value="chatbot">Normal Chatbot</option>
         </select>
-
+        
         <input
           type="text"
           className="flex-1 bg-zinc-800 text-white rounded-lg px-3 py-2 focus:outline-none"

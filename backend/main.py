@@ -46,7 +46,7 @@ def chat(req: ChatRequest):
     system_prompt = personas.get(req.persona, personas["Normal"])
 
     payload = {
-        "model": "qwen3-4b-q4_k_m.gguf",  # same name used with llama-server
+        "model": "Qwen3-1.7B-Q6_K.gguf",  # same name used with llama-server
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": req.message}
@@ -60,3 +60,4 @@ def chat(req: ChatRequest):
     reply = data["choices"][0]["message"]["content"]
 
     return {"reply": clean_llm_response(reply)}
+    
