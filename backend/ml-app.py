@@ -81,12 +81,12 @@ def query_llama(prompt, model_params=None):
 
 # Example usage
 if __name__ == "__main__":
-    prompt = "Explain recursion in programming"
+    prompt = "" 
     
     # Test with different parameters
     params = {
         "temperature": 0.3,
-        "max_tokens": 100,
+        "max_tokens": 300,
         "top_p": 0.95
     }
     
