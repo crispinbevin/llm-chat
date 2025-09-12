@@ -82,14 +82,14 @@ def query_llama(user_prompt, system_prompt=None, model_params=None):
 if __name__ == "__main__":
     # Plain prompt
     print("\n--- Normal Prompt Run ---")
-    response1 = query_llama("Write a simple React button component with Tailwind CSS.")
+    response1 = query_llama("Write a simple React button component with Tailwind CSS. Give me code so that i can paste into editor")
     if response1:
         print("Response:", response1[:300] + "..." if len(response1) > 300 else response1)
 
     # System prompt enforcing pure JSX
     print("\n--- System Prompt Run: JSX Only ---")
     response2 = query_llama(
-        "Write a simple React button component with Tailwind CSS.",
+        "Write a simple React button component with Tailwind CSS.Give me code so that i can paste into editor",
         system_prompt="You are a code generator. Always output only valid JSX code with no explanations.",
         model_params={"temperature": 0.2, "max_tokens": 300, "top_p": 0.9}
     )
@@ -97,10 +97,10 @@ if __name__ == "__main__":
         print("Response:", response2[:300] + "..." if len(response2) > 300 else response2)
 
     # System prompt with inline comments
-    print("\n--- System Prompt Run: Tutor ---")
+    print("\n--- System Prompt Run: Senior Dev ---")
     response3 = query_llama(
-        "Write a simple React button component with Tailwind CSS.",
-        system_prompt="You are a helpful tutor who explains the code with inline comments.",
+        "Write a simple React button component with Tailwind CSS. Give me code so that i can paste into editor",
+        system_prompt="You are a senior-level software engineer specializing in React and full-stack development. Your job is to produce accurate, production-quality React code for components and systems of any complexity",
         model_params={"temperature": 0.4, "max_tokens": 400, "top_p": 0.95}
     )
     if response3:
