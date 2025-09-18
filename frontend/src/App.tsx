@@ -93,6 +93,7 @@ function App() {
           <option value="teacher">Explanatory Teacher</option>
           <option value="technical">Technical Explainer</option>
           <option value="chatbot">Normal Chatbot</option>
+          <option value="HyperBlox Chatbot">Hyperblox Chatbot</option>
         </select>
         
         <input
