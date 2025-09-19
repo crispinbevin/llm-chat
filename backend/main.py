@@ -10,7 +10,7 @@ from typing import List, Dict, Optional
 
 # Import the crawler (make sure the crawler file is in the same directory)
 try:
-    from web_crawler_rag import WebCrawler, RAGQueryEngine
+    from crawler import WebCrawler, RAGQueryEngine
     CRAWLER_AVAILABLE = True
 except ImportError:
     CRAWLER_AVAILABLE = False
