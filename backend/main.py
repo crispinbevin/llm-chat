@@ -3,18 +3,17 @@ from pydantic import BaseModel
 import requests
 from fastapi.middleware.cors import CORSMiddleware
 import json, uuid, time, datetime
-import subprocess
-import sys
 import os
-from typing import List, Dict, Optional
+from typing import Optional
+import re
 
-# Import the crawler (make sure the crawler file is in the same directory)
+# Import only the RAGQueryEngine (crawler will be run manually)
 try:
-    from crawler import WebCrawler, RAGQueryEngine
+    from rag_engine import RAGQueryEngine
     CRAWLER_AVAILABLE = True
 except ImportError:
     CRAWLER_AVAILABLE = False
-    print("Warning: Crawler module not found. Crawler endpoints will be disabled.")
+    print("Warning: RAGQueryEngine not found. RAG persona will be disabled.")
 
 LOG_FILE = "chat_logs.jsonl"
 
@@ -22,16 +21,10 @@ def log_interaction(data: dict):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
-
-import re
-
 def clean_llm_response(response: str) -> str:
     cleaned = re.sub(r'<think>.*?</think>\s*', '', response, flags=re.DOTALL)
-    
     cleaned = cleaned.strip()
-    
     cleaned = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned)
-    
     return cleaned
 
 app = FastAPI()
@@ -49,7 +42,7 @@ personas = {
     "Teaching": "You are an explanatory teacher. Use simple language and some metaphors to make concepts easier to understand.",
     "Expert": "You are a technically competent professional. Explain things in precise technical terms, using domain knowledge.",
     "Normal": "You are a normal chatbot. Be casual, friendly, and conversational.",
-    "RAG": "You are a helpful assistant with access to specific website information. Use the provided context to answer questions accurately. Always cite the source URLs when referencing specific information. If the context doesn't contain relevant information, say so clearly."
+    "RAG": "You are a helpful assistant with access to the hyperblox website. Use the provided context to answer questions accurately. Always cite the source URLs when referencing specific information. If the context doesn't contain relevant information, say so clearly."
 }
 
 LLAMA_SERVER = "http://localhost:8080/v1/chat/completions"
@@ -68,11 +61,6 @@ class ChatRequest(BaseModel):
     persona: str
     message: str
 
-class CrawlRequest(BaseModel):
-    url: str
-    max_pages: Optional[int] = 50
-    delay: Optional[float] = 1.5
-
 class RAGQueryRequest(BaseModel):
     query: str
     top_k: Optional[int] = 5
@@ -80,7 +68,6 @@ class RAGQueryRequest(BaseModel):
 @app.get("/personas")
 def get_personas():
     available_personas = list(personas.keys())
-    # Only include RAG persona if the engine is available
     if not rag_engine:
         available_personas = [p for p in available_personas if p != "RAG"]
     return {"available_personas": available_personas}
@@ -97,25 +84,19 @@ def chat(req: ChatRequest):
         {"role": "user", "content": req.message}
     ]
 
-    # Handle RAG queries
     context = ""
     if req.persona == "RAG" and rag_engine:
         try:
-            # Search for relevant context
             search_results = rag_engine.search(req.message, top_k=3)
-            
             if search_results:
-                context_parts = []
-                urls_cited = set()
-                
+                context_parts, urls_cited = [], set()
                 for result in search_results:
                     context_parts.append(f"Content: {result['content']}")
                     urls_cited.add(result['url'])
-                
+
                 context = "\n\n".join(context_parts)
                 urls_list = "\n".join([f"- {url}" for url in urls_cited])
-                
-                # Enhanced system prompt for RAG
+
                 rag_system_prompt = f"""You are a helpful assistant with access to specific website information. Use the provided context to answer questions accurately. Always cite the source URLs when referencing specific information.
 
 CONTEXT FROM WEBSITE:
@@ -132,7 +113,7 @@ Answer the user's question using this context. If the context doesn't fully answ
                 ]
             else:
                 messages = [
-                    {"role": "system", "content": "You are a helpful assistant. The user asked about a website, but no relevant information was found in the database. Let them know that no relevant information was found and suggest they might need to crawl the website first."},
+                    {"role": "system", "content": "You are a helpful assistant. The user asked about a website, but no relevant information was found in the database."},
                     {"role": "user", "content": req.message}
                 ]
         except Exception as e:
@@ -150,7 +131,7 @@ Answer the user's question using this context. If the context doesn't fully answ
 
         raw_reply = data["choices"][0]["message"]["content"]
         cleaned_reply = clean_llm_response(raw_reply)
-        
+
         end_time = time.time()
         response_time = end_time - start_time
 
@@ -174,7 +155,6 @@ Answer the user's question using this context. If the context doesn't fully answ
     except requests.exceptions.RequestException as e:
         end_time = time.time()
         response_time = end_time - start_time
-        
         log_data = {
             "interaction_id": interaction_id,
             "timestamp": timestamp,
@@ -190,13 +170,11 @@ Answer the user's question using this context. If the context doesn't fully answ
             "model": "Qwen3-1.7B-Q6_K.gguf"
         }
         log_interaction(log_data)
-        
         return {"error": "Failed to get response from LLM server"}
-    
+
     except Exception as e:
         end_time = time.time()
         response_time = end_time - start_time
-        
         log_data = {
             "interaction_id": interaction_id,
             "timestamp": timestamp,
@@ -212,98 +190,7 @@ Answer the user's question using this context. If the context doesn't fully answ
             "model": "Qwen3-1.7B-Q6_K.gguf"
         }
         log_interaction(log_data)
-        
         return {"error": "Unexpected error occurred"}
-
-# New crawler endpoints
-@app.post("/crawl")
-def crawl_website(req: CrawlRequest):
-    """Trigger website crawling"""
-    if not CRAWLER_AVAILABLE:
-        raise HTTPException(status_code=500, detail="Crawler module not available")
-    
-    try:
-        print(f"Starting crawl of {req.url}")
-        
-        # Create crawler instance
-        crawler = WebCrawler(
-            base_url=req.url, 
-            max_pages=req.max_pages, 
-            delay=req.delay
-        )
-        
-        # Run crawl in background (for production, consider using Celery or similar)
-        crawler.run_full_crawl()
-        
-        # Reinitialize RAG engine with new data
-        global rag_engine
-        rag_engine = RAGQueryEngine("crawl_data")
-        
-        return {
-            "status": "completed",
-            "message": f"Successfully crawled {len(crawler.crawled_data)} chunks from {len(crawler.visited_urls)} pages",
-            "total_chunks": len(crawler.crawled_data),
-            "total_pages": len(crawler.visited_urls)
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Crawling failed: {str(e)}")
-
-@app.get("/crawl/status")
-def get_crawl_status():
-    """Get current crawl data status"""
-    try:
-        if os.path.exists("crawl_data/crawl_info.json"):
-            with open("crawl_data/crawl_info.json", 'r') as f:
-                info = json.load(f)
-            return {
-                "status": "data_available",
-                "info": info,
-                "rag_engine_ready": rag_engine is not None
-            }
-        else:
-            return {
-                "status": "no_data",
-                "message": "No crawled data found. Run /crawl first.",
-                "rag_engine_ready": False
-            }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e),
-            "rag_engine_ready": False
-        }
-
-@app.post("/search")
-def search_crawled_data(req: RAGQueryRequest):
-    """Search through crawled data"""
-    if not rag_engine:
-        raise HTTPException(status_code=503, detail="RAG engine not initialized. Crawl a website first.")
-    
-    try:
-        results = rag_engine.search(req.query, req.top_k)
-        return {
-            "query": req.query,
-            "results": results,
-            "total_found": len(results)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
-
-@app.delete("/crawl/data")
-def clear_crawl_data():
-    """Clear all crawled data"""
-    try:
-        import shutil
-        if os.path.exists("crawl_data"):
-            shutil.rmtree("crawl_data")
-        
-        global rag_engine
-        rag_engine = None
-        
-        return {"status": "success", "message": "All crawled data cleared"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
